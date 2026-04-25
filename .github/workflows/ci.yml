@@ -1,0 +1,74 @@
+name: DevAssist PHP Pipeline
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+    branches: [main, master]
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: "pages"
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    env:
+      LLM_API_KEY:  ${{ secrets.LLM_API_KEY }}
+      LLM_PROVIDER: ${{ secrets.LLM_PROVIDER }}
+      LLM_MODEL:    ${{ secrets.LLM_MODEL }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: "8.2"
+          tools: composer
+
+      - name: Instalar dependências
+        if: ${{ hashFiles('composer.json') != '' }}
+        run: composer install --no-interaction --no-progress
+
+      - name: Executar testes unitários
+        if: ${{ hashFiles('phpunit.xml', 'phpunit.xml.dist') != '' }}
+        run: vendor/bin/phpunit --colors=never
+
+      - name: Gerar documentação (phpDocumentor)
+        run: |
+          curl -sL https://phpdoc.org/phpDocumentor.phar -o phpdoc.phar
+          mkdir -p docs
+          if [ -d src ]; then
+            php phpdoc.phar run --directory=src --target=docs --template=default --title="API Documentation" 2>/dev/null || true
+          else
+            php phpdoc.phar run --directory=. --ignore=vendor,tests,docs,node_modules --target=docs --template=default --title="API Documentation" 2>/dev/null || true
+          fi
+
+      - name: Configurar GitHub Pages
+        if: github.event_name != 'pull_request'
+        uses: actions/configure-pages@v5
+
+      - name: Upload artefato do Pages
+        if: github.event_name != 'pull_request'
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: docs
+
+  deploy:
+    needs: build
+    if: github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    environment:
+      name: "github-pages"
+      url: ${{ steps.deployment.outputs.page_url }}
+
+    steps:
+      - name: Publicar no GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4

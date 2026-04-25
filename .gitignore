@@ -1,0 +1,9 @@
+vendor/
+node_modules/
+.env
+.env.local
+*.log
+*.cache
+/coverage/
+/.phpunit.cache/
+n8n-workflow.json
