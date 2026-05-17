@@ -1,9 +1,11 @@
 <?php
+
 /**
- * Classe responsável pela gestão de usuários, incluindo criação e busca de usuários por ID.
+ * Classe responsável pela gestão de usuários, incluindo criação e busca de informações.
  */
 class UserService
 {
+
 
     /**
      * Cria um novo usuário com um ID aleatório, nome e email fornecidos.
